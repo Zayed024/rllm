@@ -20,7 +20,11 @@ rllm model setup               # configure your model provider (e.g. an OpenAI m
 ## Run
 
 ```bash
-# from the repo root (so `cookbooks` is importable)
+# `search` is the built-in default agent for gaia (rllm.harnesses.search:SearchHarness)
+rllm eval gaia --max-examples 5
+
+# explicit forms, equivalent:
+rllm eval gaia --agent search --max-examples 5
 PYTHONPATH=. rllm eval gaia --agent cookbooks.gaia.agent:agent --max-examples 5
 ```
 
@@ -30,10 +34,10 @@ PYTHONPATH=. rllm eval gaia --agent cookbooks.gaia.agent:agent --max-examples 5
 
 ## Notes
 
-- `default_agent` for `gaia` (and `browsecomp`/`hle_search`) is `"search"`, which
-  is **not** a built-in agent — pass `--agent cookbooks.gaia.agent:agent`
-  explicitly, or register a search agent. Promoting this to a built-in `search`
-  agent would fix all three benchmarks at once (open question for maintainers).
+- The agent ships as the built-in `search` harness (`rllm.harnesses.search:SearchHarness`),
+  registered in `registry/agents.json` and the `default_agent` for `gaia`,
+  `browsecomp`, `hle_search`, `seal0`, and `widesearch`. The cookbook module
+  re-exports it for backward compatibility.
 - Accuracy depends on the model + tools; the contribution here is the native
   integration (dataset + official scorer + a runnable search/browse harness),
   not a leaderboard number.

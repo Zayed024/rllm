@@ -4,6 +4,7 @@ tool so the control flow is covered without network or API keys.
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 
 from cookbooks.gaia.agent import run_tool_loop  # repo root on sys.path via conftest.py
@@ -181,3 +182,37 @@ def test_llm_error_records_no_step():
     steps, answer = run_tool_loop(_FailingClient(), "test-model", [_FakeSearchTool()], "q", max_turns=5)
     assert steps == []
     assert answer == ""
+
+
+# ---------------------------------------------------------------------------
+# built-in `search` agent registration (default_agent for gaia & friends)
+# ---------------------------------------------------------------------------
+def test_search_agent_registered_and_loadable():
+    """`rllm eval gaia` (no --agent) resolves catalog default_agent `search` through
+    load_agent — it must be a registered built-in, not a dangling name."""
+    import json
+
+    from rllm.eval.agent_loader import load_agent
+
+    agent = load_agent("search")
+    from rllm.harnesses.search import SearchHarness
+
+    assert isinstance(agent, SearchHarness)
+
+    catalog = json.loads((Path(__file__).parents[2] / "rllm" / "registry" / "agents.json").read_text())
+    assert catalog["agents"]["search"]["function"] == "SearchHarness"
+
+
+def test_search_default_agent_datasets_resolve():
+    """Every catalog dataset whose default_agent is `search` must resolve to the
+    built-in SearchHarness."""
+    import json
+
+    from rllm.eval.agent_loader import load_agent
+
+    ds_catalog = json.loads((Path(__file__).parents[2] / "rllm" / "registry" / "datasets.json").read_text())
+    search_datasets = [name for name, e in ds_catalog["datasets"].items() if e.get("default_agent") == "search"]
+    assert "gaia" in search_datasets
+    for name in search_datasets:
+        agent = load_agent(ds_catalog["datasets"][name]["default_agent"])
+        assert agent.name == "search", f"dataset {name}: default_agent did not resolve to SearchHarness"
